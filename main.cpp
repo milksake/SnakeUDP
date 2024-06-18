@@ -8,6 +8,9 @@ struct Snake {
   std::vector<std::pair<int, int>> body;
   char initial;
   char direction;
+  sockaddr_storage addr;
+  socklen_t addr_size;
+  int score;
 };
 
 std::map<char, Snake> snakes;
@@ -107,7 +110,7 @@ void handle_initialization(int socket, const std::string& message, sockaddr_stor
     for (int i = 1; i < 5; ++i) {
       body[i].second -= i;
     }
-    snakes[initial] = Snake{body, initial, 'U'};
+    snakes[initial] = Snake{body, initial, 'U', addr, addr_size};
     response = "Y";
   }
   sendString(socket, response, addr, addr_size);
@@ -124,7 +127,10 @@ void handle_move(int socket, const std::string& message, sockaddr_storage addr, 
       response += board[i][j];
     }
   }
-  sendString(socket, response, addr, addr_size);
+  for (auto &p : snakes)
+  {
+    sendString(socket, response, p.second.addr, p.second.addr_size);
+  }
 }
 
 void main_handler(int socket, const std::string& datum, sockaddr_storage addr, socklen_t addr_size) {
