@@ -2,16 +2,19 @@
 
 #define BOARD_WIDTH 40
 #define BOARD_HEIGHT 20
+#define WINNER_POINTS 100
 
 struct Snake {
   std::vector<std::pair<int, int>> body;
   char initial;
   char direction;
+  int points = 0;
 };
 
 std::map<char, Snake> snakes;
 char board[BOARD_HEIGHT][BOARD_WIDTH];
-int scores[256] = {0};
+std::unordered_map<char, sockaddr_storage> clients;
+std::unordered_map<char, socklen_t> clients_sizes;
 
 void initialize_board() {
   memset(board, ' ', sizeof(board));
@@ -22,16 +25,17 @@ void update_board() {
   for (const auto& pair : snakes) {
     const Snake& snake = pair.second;
     for (const auto &part : snake.body) {
-      std::cout << part.first << " " << part.second << " ";
+      // std::cout << part.first << " " << part.second << " ";
       board[part.first][part.second] = snake.initial;
-      std::cout << snake.initial << " ";
+      // std::cout << snake.initial << " ";
     }
-    std::cout << std::endl;
+    // std::cout << std::endl;
   }
 }
 
 bool is_collision(const std::pair<int, int>& head, char initial) {
-  return board[head.first][head.second] != ' ' && board[head.first][head.second] != initial;
+    return head.first < 0 || head.first >= BOARD_HEIGHT || head.second < 0 || head.second >= BOARD_WIDTH || 
+           (board[head.first][head.second] != ' ' && board[head.first][head.second] != initial);
 }
 
 void bfs_clear_snake(char initial) {
@@ -50,40 +54,47 @@ void bfs_clear_snake(char initial) {
   }
 }
 
+void broadcast(int socket, const std::string& message) {
+  for (const auto& client : clients) {
+    sendString(socket, message, client.second, clients_sizes[client.first]);
+  }
+}
 
 void move_snake(int socket, char initial, char direction, sockaddr_storage addr, socklen_t addr_size) {
   if (snakes.find(initial) == snakes.end()) return;
   Snake& snake = snakes[initial];
   auto head = snake.body.front();
-  std::pair<int, int>& new_head = head;
-
-  std::cout << "direction: " << direction << std::endl;
+  std::pair<int, int> new_head = head;
 
   switch (direction) {
   case 'u':
-    std::cout << "moving UP" << std::endl;
     new_head.first -= 1;
     break;
   case 'd':
-    std::cout << "moving DOWN" << std::endl;
     new_head.first += 1;
     break;
   case 'l':
-    std::cout << "moving LEFT" << std::endl;
     new_head.second -= 1;
     break;
   case 'r':
-    std::cout << "moving RIGHT" << std::endl;
     new_head.second += 1;
     break;
   }
 
   if (is_collision(new_head, initial)) {
-    bfs_clear_snake(initial);
-    snakes.erase(initial);
+    char del = board[new_head.first][new_head.second];
+    bfs_clear_snake(del);
+    snakes.erase(del);
     std::string message = "L";
-    message += initial;
-    sendString(socket, message, addr, addr_size);
+    message += del;
+    broadcast(socket, message);
+    std::cout << "CHOQUE" << std::endl;
+
+    if(++snake.points == WINNER_POINTS){
+      message = "W";
+      message += initial;
+      broadcast(socket, message);
+    }
     return;
   }
 
@@ -107,6 +118,8 @@ void handle_initialization(int socket, const std::string& message, sockaddr_stor
       body[i].second -= i;
     }
     snakes[initial] = Snake{body, initial, 'U'};
+    clients[initial] = addr;
+    clients_sizes[initial] = addr_size;
     response = "Y";
   }
   sendString(socket, response, addr, addr_size);
@@ -123,7 +136,7 @@ void handle_move(int socket, const std::string& message, sockaddr_storage addr, 
       response += board[i][j];
     }
   }
-  sendString(socket, response, addr, addr_size);
+  broadcast(socket, response);
 }
 
 void main_handler(int socket, const std::string& datum, sockaddr_storage addr, socklen_t addr_size) {

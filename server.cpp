@@ -85,7 +85,6 @@ bool UDPListener::isRunning()
 
 void sendString(const int socket, const std::string& message, sockaddr_storage addr, socklen_t addr_size)
 {
-  std::cout << message << std::endl;
     sendto(socket, message.c_str(), message.size(), 0, (struct sockaddr *) &addr, addr_size);
 }
 
