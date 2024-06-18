@@ -1,5 +1,6 @@
 #include "server.h"
 
+#define PORT "3490"
 #define BOARD_WIDTH 40
 #define BOARD_HEIGHT 20
 

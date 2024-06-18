@@ -19,8 +19,6 @@
 #include <cstring>
 #include <iostream>
 
-#define PORT "3490"
-
 class UDPListener
 {
     int socketFD;
