@@ -12,6 +12,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <cstring>
+#include <iostream>
 
 #define PORT "3490"
 
@@ -19,19 +20,19 @@ class UDPListener
 {
     int socketFD;
     bool keep;
-    std::function<void(const std::string&, sockaddr_storage, socklen_t)> func;
+    std::function<void(const int, const std::string&, sockaddr_storage, socklen_t)> func;
 
     void loop();
 
 public:
-    UDPListener(const std::function<void(const std::string& datum, sockaddr_storage addr, socklen_t addr_size)>& _func, const char* _port);
+    UDPListener(const std::function<void(const int sock, const std::string& datum, sockaddr_storage addr, socklen_t addr_size)>& _func, const char* _port);
 
     void run();
     void stop();
     bool isRunning();
 };
 
-UDPListener::UDPListener(const std::function<void(const std::string&, sockaddr_storage, socklen_t)> &_func, const char* _port) :
+UDPListener::UDPListener(const std::function<void(const int, const std::string&, sockaddr_storage, socklen_t)> &_func, const char* _port) :
     func(_func), keep(false)
 {
     struct addrinfo hints, *servinfo, *p;
@@ -89,7 +90,7 @@ void UDPListener::loop()
         buff[numbytes] = '\0';
         std::string datum(buff, numbytes);
         
-        std::thread th(func, datum, addr, addr_size);
+        std::thread th(func, socketFD, datum, addr, addr_size);
         th.detach();
     }
 }
@@ -114,15 +115,26 @@ bool UDPListener::isRunning()
     return keep;
 }
 
+void sendString(const int socket, const std::string& message, sockaddr_storage addr, socklen_t addr_size)
+{
+    sendto(socket, message.c_str(), message.size(), 0, (struct sockaddr *) &addr, addr_size);
+}
+
 signed main()
 {
-    auto lamb = [](const std::string& datum, sockaddr_storage addr, socklen_t addr_size) {
+    bool keep = true;
 
+    auto lamb = [&keep](const int socket, const std::string& datum, sockaddr_storage addr, socklen_t addr_size) {
+        std::cout << datum << '\n';
+        sendString(socket, "Hola", addr, addr_size);
+        keep = false;
     };
 
     UDPListener listener(lamb, PORT);
 
     listener.run();
+
+    while(keep) {}
 
     listener.stop();
 }
