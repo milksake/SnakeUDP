@@ -11,6 +11,8 @@
 #define BOARD_WIDTH 42
 #define BOARD_HEIGHT 22
 
+std::string lastMessage;
+
 void handleSend(int socket_fd, sockaddr_in hostAddr, socklen_t addrLen, char userInitial) {
     char msgBuffer[MAX_BUFFER_SIZE];
     int keyPressed;
@@ -48,7 +50,7 @@ void handleReceive(int socket_fd, char userInitial) {
         switch (recvBuffer[0]) {
             case 'Y':
                 clear();  // Limpia la pantalla antes de imprimir el nuevo mapa
-                mvprintw(0, 0, "%s", recvBuffer + 1);  // Imprime el mapa recibido desde la posición (0, 0)
+                lastMessage = "Joined game successfully.";
                 break;
             case 'N':
                 mvprintw(0, 0, "Initial already in use. Disconnecting...");
@@ -87,6 +89,13 @@ void handleReceive(int socket_fd, char userInitial) {
                     close(socket_fd);
                     exit(0);
                 }
+                else
+                {
+                    lastMessage = "User ";
+                    lastMessage.push_back(recvBuffer[1]);
+                    lastMessage += " died.";
+                }
+
                 break;
             case 'm':
                 clear();  // Limpia la pantalla antes de imprimir el nuevo mapa
@@ -106,6 +115,7 @@ void handleReceive(int socket_fd, char userInitial) {
                         mvprintw(i, 1, "%.*s", BOARD_WIDTH - 2, recvBuffer + 1 + (i - 1) * BOARD_WIDTH - 2);
                     }
                 }
+                mvprintw(23, 1, lastMessage.c_str());
             }
                 break;
             default:
@@ -149,18 +159,6 @@ int main() {
     // Recibir respuesta del servidor
     char response[MAX_BUFFER_SIZE];
     recvfrom(socket_fd, response, MAX_BUFFER_SIZE, 0, nullptr, nullptr);
-    if (response[0] == 'Y') {
-        mvprintw(0, 0, "Connection successful. Game starting...");
-        mvprintw(1, 0, "%s", response + 1);  // Imprime el mapa inicial
-        refresh();
-    } else if (response[0] == 'N') {
-        mvprintw(0, 0, "Initial already in use. Disconnecting...");
-        refresh();
-        sleep(2);
-        endwin();
-        close(socket_fd);
-        return 0;
-    }
 
     std::thread sendThread(handleSend, socket_fd, hostAddr, addrLen, userInitial);
     std::thread receiveThread(handleReceive, socket_fd, userInitial);
