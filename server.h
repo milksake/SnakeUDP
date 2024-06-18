@@ -17,6 +17,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <cstring>
+#include <iostream>
 
 #define PORT "3490"
 

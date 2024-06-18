@@ -22,8 +22,11 @@ void update_board() {
   for (const auto& pair : snakes) {
     const Snake& snake = pair.second;
     for (const auto &part : snake.body) {
+      std::cout << part.first << " " << part.second << " ";
       board[part.first][part.second] = snake.initial;
+      std::cout << snake.initial << " ";
     }
+    std::cout << std::endl;
   }
 }
 
@@ -47,24 +50,31 @@ void bfs_clear_snake(char initial) {
   }
 }
 
+
 void move_snake(int socket, char initial, char direction, sockaddr_storage addr, socklen_t addr_size) {
   if (snakes.find(initial) == snakes.end()) return;
   Snake& snake = snakes[initial];
   auto head = snake.body.front();
-  std::pair<int, int> new_head = head;
+  std::pair<int, int>& new_head = head;
+
+  std::cout << "direction: " << direction << std::endl;
 
   switch (direction) {
-  case 'U':
-    new_head.first = (new_head.first - 1 + BOARD_HEIGHT) % BOARD_HEIGHT;
+  case 'u':
+    std::cout << "moving UP" << std::endl;
+    new_head.first -= 1;
     break;
-  case 'D':
-    new_head.first = (new_head.first + 1) % BOARD_HEIGHT;
+  case 'd':
+    std::cout << "moving DOWN" << std::endl;
+    new_head.first += 1;
     break;
-  case 'L':
-    new_head.second = (new_head.second - 1 + BOARD_WIDTH) % BOARD_WIDTH;
+  case 'l':
+    std::cout << "moving LEFT" << std::endl;
+    new_head.second -= 1;
     break;
-  case 'R':
-    new_head.second = (new_head.second + 1) % BOARD_WIDTH;
+  case 'r':
+    std::cout << "moving RIGHT" << std::endl;
+    new_head.second += 1;
     break;
   }
 
@@ -76,6 +86,12 @@ void move_snake(int socket, char initial, char direction, sockaddr_storage addr,
     sendString(socket, message, addr, addr_size);
     return;
   }
+
+  snake.body.insert(snake.body.begin(), new_head);
+  if (snake.body.size() > 5) {
+    snake.body.pop_back();
+  }
+  snake.direction = direction;
 }
 
 std::unordered_map<char, std::function<void(int socket, const std::string&, sockaddr_storage, socklen_t)>> handlers;
@@ -111,6 +127,7 @@ void handle_move(int socket, const std::string& message, sockaddr_storage addr, 
 }
 
 void main_handler(int socket, const std::string& datum, sockaddr_storage addr, socklen_t addr_size) {
+  std::cout << datum << std::endl;
   char message_type = datum[0];
   if (handlers.find(message_type) != handlers.end()) {
     handlers[message_type](socket, datum, addr, addr_size);
