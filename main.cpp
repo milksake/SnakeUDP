@@ -83,7 +83,7 @@ void update_board() {
 }
 
 bool is_collision(const std::pair<int, int>& head, char initial) {
-    return (getMap(head.first,head.second) != ' ' && board[head.first][head.second] != initial);
+    return (board[head.first][head.second] != ' ' && board[head.first][head.second] != initial);
 }
 
 void bfs_clear_snake(char initial) {
@@ -112,36 +112,41 @@ void move_snake(int socket, char initial, char direction, sockaddr_storage addr,
   if (snakes.find(initial) == snakes.end()) return;
   Snake& snake = snakes[initial];
   auto head = snake.body.front();
-  std::pair<int, int> new_head = head;
+  std::vector<std::pair<int, int>> new_body = snake.body;
 
   bool type;
   int diff;
   switch (direction) {
   case 'u':
-    new_head.first -= 1;
+    for (int i = 0; i < 5; i++)
+      new_body[i].first -= 1;
     type = 0;
     diff = -1;
     break;
   case 'd':
-    new_head.first += 1;
+    for (int i = 0; i < 5; i++)
+      new_body[i].first += 1;
     type = 0;
     diff = 1;
     break;
   case 'l':
-    new_head.second -= 1;
+    for (int i = 0; i < 5; i++)
+      new_body[i].second -= 1;
     type = 1;
     diff = -1;
     break;
   case 'r':
-    new_head.second += 1;
+    for (int i = 0; i < 5; i++)
+      new_body[i].second += 1;
     type = 1;
     diff = 1;
     break;
   }
 
+  auto new_head = new_body.front();
   if (new_head.first < 0 || new_head.first >= BOARD_HEIGHT || new_head.second < 0 || new_head.second >= BOARD_WIDTH || getMap(new_head.first, new_head.second) == '#')
   {
-    bfs_clear_snake(initial);
+    // bfs_clear_snake(initial);
     snakes.erase(initial);
     std::string message = "L";
     message += initial;
@@ -150,9 +155,16 @@ void move_snake(int socket, char initial, char direction, sockaddr_storage addr,
   }
   else
   {
-    if (is_collision(new_head, initial)) {
+    int i = 0;
+    for (; i < 5; i++)
+    {
+      if (is_collision(new_body[i], initial))
+        break;
+    }
+    if (i < 5) {
+      new_head = new_body[i];
       char del = board[new_head.first][new_head.second];
-      bfs_clear_snake(del);
+      // bfs_clear_snake(del);
       snakes.erase(del);
       std::string message = "L";
       message += del;
@@ -238,16 +250,6 @@ void update(int socket)
 {
   currx += 1;
 
-  for (auto& mess : toProcess)
-  {
-    std::cout << mess.first << '\n';
-    char message_type = mess.first[0];
-    handlers[message_type](socket, mess.first, mess.second.first, mess.second.second);
-    std::cout << mess.first << '\n';
-  }
-
-  toProcess.clear();
-
   std::vector<char> initials_delete;
 
   for (const auto& pair : snakes) {
@@ -256,7 +258,7 @@ void update(int socket)
     char initial = snake.initial;
     if (getMap(part.first, part.second) == '#')
     {
-      bfs_clear_snake(initial);
+      // bfs_clear_snake(initial);
       // snakes.erase(initial);
       initials_delete.push_back(initial);
       std::string message = "L";
@@ -272,6 +274,17 @@ void update(int socket)
   }
 
   update_board();
+
+  for (auto& mess : toProcess)
+  {
+    std::cout << mess.first << '\n';
+    char message_type = mess.first[0];
+    handlers[message_type](socket, mess.first, mess.second.first, mess.second.second);
+    std::cout << mess.first << '\n';
+  }
+
+  toProcess.clear();
+
   std::string response = "m";
   for (int i = 0; i < BOARD_HEIGHT; ++i) {
     for (int j = 0; j < BOARD_WIDTH; ++j) {
