@@ -21,6 +21,14 @@ struct Snake {
   int points = 0;
 };
 
+struct Bullet
+{
+  int y;
+  int x;
+  char direction;
+};
+
+std::vector<Bullet> bullets;
 std::map<char, Snake> snakes;
 char OGBoard[BOARD_HEIGHT][BOARD_WIDTH];
 char board[BOARD_HEIGHT][BOARD_WIDTH];
@@ -78,6 +86,10 @@ void update_board() {
       // std::cout << snake.initial << " ";
     }
     // std::cout << std::endl;
+  }
+  for (const auto& b : bullets)
+  {
+    board[b.y][b.x] = '@';
   }
   // std::cout << "UPDATE FIN\n";
 }
@@ -236,6 +248,20 @@ void handle_move(int socket, const std::string& message, sockaddr_storage addr, 
   update_board();
 }
 
+void handle_shoot(int socket, const std::string& message, sockaddr_storage addr, socklen_t addr_size)
+{
+  char initial = message[1];
+  if (snakes.find(initial) == snakes.end()) return;
+  Snake& snake = snakes[initial];
+  auto head = snake.body.front();
+
+  bullets.push_back(Bullet{head.first - 2, head.second, 'U'});
+  bullets.push_back(Bullet{head.first + 2, head.second, 'D'});
+  bullets.push_back(Bullet{head.first, head.second - 2, 'L'});
+  bullets.push_back(Bullet{head.first, head.second + 2, 'R'});
+  update_board();
+}
+
 void main_handler(int socket, const std::string& datum, sockaddr_storage addr, socklen_t addr_size) {
   std::cout << datum << std::endl;
   char message_type = datum[0];
@@ -275,6 +301,59 @@ void update(int socket)
 
   update_board();
 
+  for (int i = 0; i < bullets.size(); i++)
+  {
+    int newX = bullets[i].x, newY = bullets[i].y;
+    // std::cout << bullets[i].direction << '\n';
+    switch (bullets[i].direction)
+    {
+      case 'U':
+      {
+        newY -= 1;
+      }
+      break;
+      case 'D':
+      {
+        newY += 1;
+      }
+      break;
+      case 'L':
+      {
+        newX -= 1;
+      }
+      break;
+      case 'R':
+      {
+        newX += 1;
+      }
+      break;
+    }
+    std::cout << bullets[i].x << ' ' << bullets[i].y << ' ' << bullets[i].direction << '\n';
+    std::cout << '\t' << newX << ' ' << newY << ' ' << bullets[i].direction << '\n';
+
+    if (newX < 0 || newX >= BOARD_WIDTH || newY < 0 || newY >= BOARD_HEIGHT)
+    {
+      bullets.erase(bullets.begin() + i);
+      i--;
+      continue;
+    }
+
+    if (board[newY][newX] != '#' && board[newY][newX] != ' ' && board[newY][newX] != '@')
+    {
+      char initial = board[newY][newX];
+      snakes.erase(initial);
+      std::string message = "L";
+      message += initial;
+      sendString(socket, message, clients[initial], clients_sizes[initial]);
+      std::cout << "Killed " << initial << std::endl;
+    }
+
+    bullets[i].x = newX;
+    bullets[i].y = newY;
+
+    update_board();
+  }
+
   for (auto& mess : toProcess)
   {
     std::cout << mess.first << '\n';
@@ -310,6 +389,7 @@ int main() {
 
   handlers['I'] = handle_initialization;
   handlers['M'] = handle_move;
+  handlers['S'] = handle_shoot;
 
   UDPListener listener(&main_handler, PORT);
 

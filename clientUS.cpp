@@ -5,13 +5,12 @@
 #include <arpa/inet.h>
 #include <ncurses.h>
 
+// #define HOST_IP "37.60.251.240"
 #define HOST_IP "127.0.0.1"
 #define HOST_PORT 3490
 #define MAX_BUFFER_SIZE 1024
 #define BOARD_WIDTH 42
 #define BOARD_HEIGHT 22
-
-std::string lastMessage;
 
 void handleSend(int socket_fd, sockaddr_in hostAddr, socklen_t addrLen, char userInitial) {
     char msgBuffer[MAX_BUFFER_SIZE];
@@ -32,6 +31,10 @@ void handleSend(int socket_fd, sockaddr_in hostAddr, socklen_t addrLen, char use
             case KEY_RIGHT:
                 messageToSend = "Mr" + std::string(1, userInitial);
                 break;
+            case ' ':
+                messageToSend = "S" + std::string(1, userInitial);
+                break;
+	   
             default:
                 continue;
         }
@@ -50,7 +53,7 @@ void handleReceive(int socket_fd, char userInitial) {
         switch (recvBuffer[0]) {
             case 'Y':
                 clear();  // Limpia la pantalla antes de imprimir el nuevo mapa
-                lastMessage = "Joined game successfully.";
+                mvprintw(0, 0, "%s", recvBuffer + 1);  // Imprime el mapa recibido desde la posición (0, 0)
                 break;
             case 'N':
                 mvprintw(0, 0, "Initial already in use. Disconnecting...");
@@ -61,42 +64,49 @@ void handleReceive(int socket_fd, char userInitial) {
                 exit(0);
                 break;
             case 'W':
-                if (recvBuffer[1] == userInitial) {
-                    clear();
-                    mvprintw(10, 10, " __        __         _       _   _             ");
-                    mvprintw(11, 10, " \\ \\      / /__  _ __| | __ _| |_(_) ___  _ __  ");
-                    mvprintw(12, 10, "  \\ \\ /\\ / / _ \\| '__| |/ _` | __| |/ _ \\| '_ \\ ");
-                    mvprintw(13, 10, "   \\ V  V / (_) | |  | | (_| | |_| | (_) | | | |");
-                    mvprintw(14, 10, "    \\_/\\_/ \\___/|_|  |_|\\__,_|\\__|_|\\___/|_| |_|");
-                    refresh();
-                    sleep(5);
-                    endwin();
-                    close(socket_fd);
-                    exit(0);
-                }
-                break;
-            case 'L':
-                if (recvBuffer[1] == userInitial) {
-                    clear();
-                    mvprintw(10, 10, "  _                   _               ");
-                    mvprintw(11, 10, " | |    _____   _____| | ___  _ __ ___ ");
-                    mvprintw(12, 10, " | |   / _ \\ \\ / / _ \\ |/ _ \\| '__/ _ \\");
-                    mvprintw(13, 10, " | |__|  __/\\ V /  __/ | (_) | | |  __/");
-                    mvprintw(14, 10, " |_____\\___| \\_/ \\___|_|\\___/|_|  \\___|");
-                    refresh();
-                    sleep(5);
-                    endwin();
-                    close(socket_fd);
-                    exit(0);
-                }
-                else
-                {
-                    lastMessage = "User ";
-                    lastMessage.push_back(recvBuffer[1]);
-                    lastMessage += " died.";
-                }
+    if (recvBuffer[1] == userInitial) {
+        clear();
+        mvprintw(10, 10, " $$\\      $$\\ $$$$$$\\ $$\\   $$\\ $$\\   $$\\ $$$$$$$$\\ $$$$$$$\\  ");
+        mvprintw(11, 10, " $$ | $\\  $$ |\\_$$  _|$$$\\  $$ |$$$\\  $$ |$$  _____|$$  __$$\\ ");
+        mvprintw(12, 10, " $$ |$$$\\ $$ |  $$ |  $$$$\\ $$ |$$$$\\ $$ |$$ |      $$ |  $$ |");
+        mvprintw(13, 10, " $$ $$ $$\\$$ |  $$ |  $$ $$\\$$ |$$ $$\\$$ |$$$$$\\    $$$$$$$  |");
+        mvprintw(14, 10, " $$$$  _$$$$ |  $$ |  $$ \\$$$$ |$$ \\$$$$ |$$  __|   $$  __$$< ");
+        mvprintw(15, 10, " $$$  / \\$$$ |  $$ |  $$ |\\$$$ |$$ |\\$$$ |$$ |      $$ |  $$ |");
+        mvprintw(16, 10, " $$  /   \\$$ |$$$$$$\\ $$ | \\$$ |$$ | \\$$ |$$$$$$$$\\ $$ |  $$ |");
+        mvprintw(17, 10, " \\__/     \\__|\\______|\\__|  \\__|\\__|  \\__|\\________|\\__|  \\__|");
+        mvprintw(18, 10, "                                                             ");
+        mvprintw(19, 10, "                                                             ");
+        mvprintw(20, 10, "                                                             ");
+        refresh();
+        sleep(5);
+        endwin();
+        close(socket_fd);
+        exit(0);
+    }
+    break;
 
-                break;
+            case 'L':
+    if (recvBuffer[1] == userInitial) {
+        clear();
+        mvprintw(10, 10, " $$\\       $$$$$$\\   $$$$$$\\  $$$$$$$$\\ $$$$$$$\\  ");
+        mvprintw(11, 10, " $$ |     $$  __$$\\ $$  __$$\\ $$  _____|$$  __$$\\ ");
+        mvprintw(12, 10, " $$ |     $$ /  $$ |$$ /  \\__|$$ |      $$ |  $$ |");
+        mvprintw(13, 10, " $$ |     $$ |  $$ |\\$$$$$$\\  $$$$$\\    $$$$$$$  |");
+        mvprintw(14, 10, " $$ |     $$ |  $$ | \\____$$\\ $$  __|   $$  __$$< ");
+        mvprintw(15, 10, " $$ |     $$ |  $$ |$$\\   $$ |$$ |      $$ |  $$ |");
+        mvprintw(16, 10, " $$$$$$$$\\ $$$$$$  |\\$$$$$$  |$$$$$$$$\\ $$ |  $$ |");
+        mvprintw(17, 10, " \\________|\\______/  \\______/ \\________|\\__|  \\__|");
+        mvprintw(18, 10, "                                                 ");
+        mvprintw(19, 10, "                                                 ");
+        mvprintw(20, 10, "                                                 ");
+        refresh();
+        sleep(5);
+        endwin();
+        close(socket_fd);
+        exit(0);
+    }
+    break;
+
             case 'm':
                 clear();  // Limpia la pantalla antes de imprimir el nuevo mapa
                 // mvprintw(0, 0, "%s", recvBuffer + 1);  // Imprime el mapa recibido desde la posición (0, 0)
@@ -115,7 +125,6 @@ void handleReceive(int socket_fd, char userInitial) {
                         mvprintw(i, 1, "%.*s", BOARD_WIDTH - 2, recvBuffer + 1 + (i - 1) * BOARD_WIDTH - 2);
                     }
                 }
-                mvprintw(23, 1, lastMessage.c_str());
             }
                 break;
             default:
@@ -159,6 +168,18 @@ int main() {
     // Recibir respuesta del servidor
     char response[MAX_BUFFER_SIZE];
     recvfrom(socket_fd, response, MAX_BUFFER_SIZE, 0, nullptr, nullptr);
+    if (response[0] == 'Y') {
+        mvprintw(0, 0, "Connection successful. Game starting...");
+        mvprintw(1, 0, "%s", response + 1);  // Imprime el mapa inicial
+        refresh();
+    } else if (response[0] == 'N') {
+        mvprintw(0, 0, "Initial already in use. Disconnecting...");
+        refresh();
+        sleep(2);
+        endwin();
+        close(socket_fd);
+        return 0;
+    }
 
     std::thread sendThread(handleSend, socket_fd, hostAddr, addrLen, userInitial);
     std::thread receiveThread(handleReceive, socket_fd, userInitial);
